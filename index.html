@@ -95,13 +95,7 @@ body.mlg .dance{animation:floatR 1.5s ease-in-out infinite}
   background:linear-gradient(90deg,#fff 0 38%,transparent 38% 62%,#fff 62%)}
 .hit::before{transform:rotate(45deg)}.hit::after{transform:rotate(-45deg)}
 
-#gate{position:fixed;inset:0;z-index:10;display:grid;place-items:center;background:rgba(7,4,15,.55);
-  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
-#go{font-family:var(--display);font-size:clamp(30px, 9vw, 64px);text-transform:uppercase;cursor:pointer;
-  background:var(--gold);color:#000;border:6px solid #000;padding:14px 28px;box-shadow:8px 8px 0 var(--hot);
-  animation:pulse .75s ease-in-out infinite}
-#go:focus-visible{outline:4px solid var(--sky);outline-offset:6px}
-#go small{display:block;font-family:var(--hud);font-size:.3em;letter-spacing:.1em}
+[hidden]{display:none!important}
 
 #mute{position:fixed;z-index:11;right:calc(12px + env(safe-area-inset-right, 0px));bottom:calc(12px + env(safe-area-inset-bottom, 0px));
   font-family:var(--hud);font-size:13px;background:#000;color:var(--fg);border:3px solid var(--fg);padding:8px 12px;cursor:pointer}
@@ -179,8 +173,7 @@ body.shake .wrap{animation:shake .25s linear 2}
 </main>
 
 <div id="fx"></div>
-<div id="gate"><button id="go" type="button">Spustit MLG<small>pusť si zvuk 🔊</small></button></div>
-<button id="mute" type="button" hidden>🔊 ZVUK</button>
+<button id="mute" type="button">🔇 KLIKNI PRO ZVUK</button>
 
 <script>
 (() => {
@@ -294,14 +287,21 @@ body.shake .wrap{animation:shake .25s linear 2}
   }
 
   const video = $("dance");
-  function start() {
-    $("gate").hidden = true;
-    $("mute").hidden = false;
-    document.body.classList.add("mlg");
+  // browsers only allow sound after the first click/tap/key, so visuals start now and sound on first input
+  let soundOn = false;
+  function enableSound() {
+    if (soundOn) return;
+    soundOn = true;
     audio(); ac.resume && ac.resume();
-    video.muted = false; video.currentTime = 0;
-    video.play().catch(() => { video.muted = true; video.play().catch(() => {}); });
+    video.muted = muted; video.currentTime = 0;
+    video.play().catch(() => {});
     airhorn(); setTimeout(airhorn, 350); setTimeout(airhorn, 700);
+    $("mute").textContent = muted ? "🔇 ZTLUMENO" : "🔊 ZVUK";
+  }
+
+  function start() {
+    document.body.classList.add("mlg");
+    video.play().catch(() => {});
     if (reduce) return;
     let n = 0;
     setInterval(() => {
@@ -311,17 +311,19 @@ body.shake .wrap{animation:shake .25s linear 2}
       if (n % 8 === 0) { airhorn(); shake(); }
     }, 375);
   }
-  $("go").addEventListener("click", start);
-  video.play().catch(() => {}); // muted preview before the gate is clicked
+  start();
 
   document.addEventListener("pointerdown", e => {
+    if (e.target.closest("#mute")) return;
+    enableSound();
     if (e.target.closest("button, a")) return;
-    if (!document.body.classList.contains("mlg")) return;
     hit(e.clientX, e.clientY); hitSound();
     if (Math.random() < .4) pop(e.clientX, e.clientY - 40);
   });
+  document.addEventListener("keydown", enableSound);
 
   $("mute").addEventListener("click", () => {
+    if (!soundOn) { enableSound(); return; }
     muted = !muted;
     video.muted = muted;
     $("mute").textContent = muted ? "🔇 ZTLUMENO" : "🔊 ZVUK";
